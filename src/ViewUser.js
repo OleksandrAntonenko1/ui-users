@@ -448,7 +448,13 @@ class ViewUser extends React.Component {
   }
 
   render() {
-    const { resources, stripes, parentResources, tagsEnabled } = this.props;
+    const {
+      resources,
+      stripes,
+      parentResources,
+      tagsEnabled,
+      stripes: { intl: { formatMessage } },
+    } = this.props;
 
     const addressTypes = (parentResources.addressTypes || {}).records || [];
     const query = resources.query;
@@ -464,31 +470,31 @@ class ViewUser extends React.Component {
     const preferredServicePoint = this.props.getPreferredServicePoint();
     const formatMsg = stripes.intl.formatMessage;
     const detailMenu =
-    (
-      <PaneMenu>
-        {
-          tagsEnabled && <IconButton
-            icon="tag"
-            title={formatMsg({ id: 'ui-users.showTags' })}
-            id="clickable-show-tags"
+      (
+        <PaneMenu>
+          {
+            tagsEnabled && <IconButton
+              icon="tag"
+              title={formatMsg({ id: 'ui-users.showTags' })}
+              id="clickable-show-tags"
 
-            onClick={this.props.tagsToggle}
-            badgeCount={tags.length}
-            aria-label={formatMsg({ id: 'ui-users.showTags' })}
-          />
-        }
-        <IfPermission perm="users.item.put">
-          <IconButton
-            icon="edit"
-            id="clickable-edituser"
-            style={{ visibility: !user ? 'hidden' : 'visible' }}
-            onClick={this.props.onEdit}
-            href={this.props.editLink}
-            aria-label={formatMsg({ id: 'ui-users.crud.editUser' })}
-          />
-        </IfPermission>
-      </PaneMenu>
-    );
+              onClick={this.props.tagsToggle}
+              badgeCount={tags.length}
+              aria-label={formatMsg({ id: 'ui-users.showTags' })}
+            />
+          }
+          <IfPermission perm="users.item.put">
+            <IconButton
+              icon="edit"
+              id="clickable-edituser"
+              style={{ visibility: !user ? 'hidden' : 'visible' }}
+              onClick={this.props.onEdit}
+              href={this.props.editLink}
+              aria-label={formatMsg({ id: 'ui-users.crud.editUser' })}
+            />
+          </IfPermission>
+        </PaneMenu>
+      );
 
     if (!user) {
       return (
@@ -538,7 +544,21 @@ class ViewUser extends React.Component {
       />);
 
     return (
-      <Pane id="pane-userdetails" defaultWidth={this.props.paneWidth} paneTitle={getFullName(user)} lastMenu={detailMenu} dismissible onClose={this.props.onClose} appIcon={{ app: 'users' }}>
+      <Pane
+        id="pane-userdetails"
+        defaultWidth={this.props.paneWidth}
+        paneTitle={getFullName(user)}
+        lastMenu={detailMenu}
+        dismissible
+        onClose={this.props.onClose}
+        appIcon={{ app: 'users' }}
+        actionMenuItems={[{
+          title: formatMessage({ id: 'ui-users.edit' }),
+          label: formatMessage({ id: 'ui-users.edit' }),
+          href: this.props.editLink,
+          onClick: this.props.onEdit,
+        }]}
+      >
         <TitleManager record={getFullName(user)} />
 
         <Headline size="xx-large" tag="h2">{getFullName(user)}</Headline>

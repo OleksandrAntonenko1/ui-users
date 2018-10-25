@@ -130,15 +130,18 @@ class UserForm extends React.Component {
   }
 
   getAddFirstMenu() {
-    const { onCancel } = this.props;
+    const {
+      onCancel,
+      stripes: { intl: { formatMessage } },
+    } = this.props;
 
     return (
       <PaneMenu>
         <IconButton
           id="clickable-closenewuserdialog"
           onClick={onCancel}
-          title={this.props.stripes.intl.formatMessage({ id: 'ui-users.crud.closeNewUserDialog' })}
-          ariaLabel={this.props.stripes.intl.formatMessage({ id: 'ui-users.crud.closeNewUserDialog' })}
+          title={formatMessage({ id: 'ui-users.crud.closeNewUserDialog' })}
+          ariaLabel={formatMessage({ id: 'ui-users.crud.closeNewUserDialog' })}
           icon="closeX"
         />
       </PaneMenu>
@@ -184,19 +187,36 @@ class UserForm extends React.Component {
   }
 
   render() {
-    const { initialValues, handleSubmit, stripes: { intl } } = this.props;
+    const {
+      initialValues,
+      handleSubmit,
+      stripes: { intl: { formatMessage } },
+      onCancel,
+    } = this.props;
+
     const { sections } = this.state;
     const firstMenu = this.getAddFirstMenu();
-    const paneTitle = initialValues.id ? getFullName(initialValues) : intl.formatMessage({ id: 'ui-users.crud.createUser' });
+    const paneTitle = initialValues.id ? getFullName(initialValues) : formatMessage({ id: 'ui-users.crud.createUser' });
     const lastMenu = initialValues.id ?
-      this.getLastMenu('clickable-updateuser', intl.formatMessage({ id: 'ui-users.crud.updateUser' })) :
-      this.getLastMenu('clickable-createnewuser', intl.formatMessage({ id: 'ui-users.crud.createUser' }));
+      this.getLastMenu('clickable-updateuser', formatMessage({ id: 'ui-users.crud.updateUser' })) :
+      this.getLastMenu('clickable-createnewuser', formatMessage({ id: 'ui-users.crud.createUser' }));
 
     return (
       // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
       <form className={css.UserFormRoot} id="form-user" onSubmit={handleSubmit} onKeyDown={this.handleKeyDown}>
         <Paneset isRoot>
-          <Pane defaultWidth="100%" firstMenu={firstMenu} lastMenu={lastMenu} paneTitle={paneTitle} appIcon={{ app: 'users' }}>
+          <Pane
+            defaultWidth="100%"
+            firstMenu={firstMenu}
+            lastMenu={lastMenu}
+            paneTitle={paneTitle}
+            appIcon={{ app: 'users' }}
+            actionMenuItems={[{
+              title: formatMessage({ id: 'ui-users.cancel' }),
+              label: formatMessage({ id: 'ui-users.cancel' }),
+              onClick: onCancel,
+            }]}
+          >
             <div className={css.UserFormContent}>
               <Headline size="xx-large" tag="h2">{getFullName(initialValues)}</Headline>
               <Row end="xs">
