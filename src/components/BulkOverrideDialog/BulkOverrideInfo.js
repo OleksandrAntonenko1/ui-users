@@ -7,7 +7,6 @@ import {
   omit,
   isEmpty,
   get,
-  find,
 } from 'lodash';
 
 import {
@@ -25,15 +24,33 @@ import SafeHTMLMessage from '@folio/react-intl-safe-html';
 import BulkOverrideLoansList from './BulkOverrideLoansList';
 
 class BulkOverrideInfo extends React.Component {
+  static manifest = Object.freeze({
+    renew: {
+      type: 'okapi',
+      fetch: false,
+      POST: {
+        path: 'circulation/override-renewal-by-barcode',
+      },
+    },
+  });
+
   static propTypes = {
     stripes: stripesShape.isRequired,
+    mutator: PropTypes.shape({
+      override: PropTypes.shape({
+        POST: PropTypes.func.isRequired,
+      }).isRequired,
+    }).isRequired,
     failedRenewals: PropTypes.arrayOf(
       PropTypes.object
     ).isRequired,
+    showDueDatePicker: PropTypes.bool.isRequired,
+    user: PropTypes.object.isRequired,
     loanPolicies: PropTypes.object.isRequired,
     requestCounts: PropTypes.object.isRequired,
     errorMessages: PropTypes.object.isRequired,
     onCancel: PropTypes.func.isRequired,
+    onCloseRenewModal: PropTypes.func.isRequired,
   };
 
   constructor(props) {
@@ -72,7 +89,7 @@ class BulkOverrideInfo extends React.Component {
 
     const { failedRenewals } = this.props;
     const { checkedLoans: loans } = this.state;
-    const id = loan.id;
+    const { id } = loan;
     const checkedLoans = (loans[id])
       ? omit(loans, id)
       : {
@@ -104,24 +121,48 @@ class BulkOverrideInfo extends React.Component {
   };
 
   submitOverride = () => {
-    // Todo: should be implemented, don't have back-end yet
-  };
+    const {
+      checkedLoans,
+      additionalInfo,
+      datetime,
+    } = this.state;
 
-  checkLoanPolicies() {
-    const { failedRenewals } = this.props;
+    const {
+      mutator: {
+        renew: {
+          POST,
+        }
+      },
+      user: {
+        barcode: userBarcode
+      },
+      onCancel,
+      onCloseRenewModal,
+    } = this.props;
 
-    const loanPoliciesInUse = new Set(failedRenewals.map((loan) => loan.loanPolicyId));
-
-    for (const loanPolicyId of loanPoliciesInUse) {
-      const { renewable } = find(this.loanPoliciesRecords, { id: loanPolicyId });
-
-      if (!renewable) {
-        return true;
+    const overriddenLoans = Object.values(checkedLoans).map(
+      ({
+        item: {
+          barcode,
+        },
+      }) => {
+        return POST(
+          {
+            userBarcode,
+            itemBarcode: barcode,
+            comment: additionalInfo,
+            ...(datetime && { dueDate: datetime })
+          }
+        );
       }
-    }
+    );
 
-    return false;
-  }
+    Promise.all(overriddenLoans)
+      .finally(() => {
+        onCancel();
+        onCloseRenewModal();
+      });
+  };
 
   render() {
     const {
@@ -131,6 +172,7 @@ class BulkOverrideInfo extends React.Component {
       requestCounts,
       errorMessages,
       onCancel,
+      showDueDatePicker,
     } = this.props;
 
     const {
@@ -140,8 +182,7 @@ class BulkOverrideInfo extends React.Component {
       datetime,
     } = this.state;
 
-    const dateSelectorDisplayed = this.checkLoanPolicies();
-    const canBeSubmittedWithDateSelector = dateSelectorDisplayed ? datetime : true;
+    const canBeSubmittedWithDateSelector = showDueDatePicker ? datetime : true;
     const canBeSubmitted = additionalInfo && !isEmpty(checkedLoans) && canBeSubmittedWithDateSelector;
     const selectedItems = Object.keys(checkedLoans).length;
 
@@ -156,7 +197,7 @@ class BulkOverrideInfo extends React.Component {
           </Layout>
         </Layout>
         {
-          dateSelectorDisplayed &&
+          showDueDatePicker &&
           <DueDatePicker
             initialValues={this.datePickerDefaults}
             stripes={stripes}

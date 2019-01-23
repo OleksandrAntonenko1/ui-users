@@ -15,7 +15,7 @@ import {
 import SafeHTMLMessage from '@folio/react-intl-safe-html';
 import { stripesShape } from '@folio/stripes/core';
 
-import bulkOverrideDialog from '../BulkOverrideDialog';
+import BulkOverrideDialog from '../BulkOverrideDialog';
 import BulkRenewedLoansList from './BulkRenewedLoansList';
 
 class BulkRenewInfo extends React.Component {
@@ -26,25 +26,42 @@ class BulkRenewInfo extends React.Component {
     loanPolicies: PropTypes.object.isRequired,
     requestCounts: PropTypes.object.isRequired,
     errorMessages: PropTypes.object.isRequired,
+    user: PropTypes.object.isRequired,
     onCancel: PropTypes.func.isRequired,
   };
 
   constructor(props) {
     super(props);
 
-    this.rewritableMessages = [
-      'loan has reached its maximum number of renewals',
-      'items with this loan policy cannot be renewed',
-      'date falls outside of the date ranges in the loan policy',
+    this.overridePossibleMessages = [
+      {
+        message: 'Loan is not renewable',
+        showDueDatePicker: true,
+      },
+      {
+        message: 'loan has reached its maximum number of renewals',
+        showDueDatePicker: false,
+      },
+      {
+        message: 'Renewal date falls outside of the date ranges in the limit schedule of rolling loan policy',
+        showDueDatePicker: false,
+      },
+      {
+        message: 'Renewal date falls outside of the date ranges in the fixed schedule of fixed loan policy',
+        showDueDatePicker: true,
+      },
     ];
 
-    this.connectedBulkOverrideDialog = props.stripes.connect(bulkOverrideDialog);
     this.connectedLoanList = props.stripes.connect(BulkRenewedLoansList);
 
     this.state = {
+      showDueDatePicker: false,
       bulkOverrideDialogOpen: false,
-      overridableLoans: this.canBeOverridden(),
     };
+  }
+
+  componentDidMount() {
+    this.setState({ overridableLoans: this.canBeOverridden() });
   }
 
   openBulkOverrideDialog = () => {
@@ -73,17 +90,22 @@ class BulkRenewInfo extends React.Component {
     }, []);
   }
 
-  isOverridePossible(errorMessage) {
-    for (const rewritableMessage of this.rewritableMessages) {
+  isOverridePossible = (errorMessage) => {
+    return this.overridePossibleMessages.reduce((overridable, { message, showDueDatePicker }) => {
       const stringErrorMessage = get(errorMessage, 'props.values.message.props.values.message', '');
 
-      if (stringErrorMessage.includes(rewritableMessage)) {
-        return true;
-      }
-    }
+      if (stringErrorMessage.includes(message)) {
+        if (showDueDatePicker) {
+          this.setState({ showDueDatePicker: true });
+        }
 
-    return false;
-  }
+        // eslint-disable-next-line no-param-reassign
+        overridable = true;
+      }
+
+      return overridable;
+    }, false);
+  };
 
   render() {
     const {
@@ -94,11 +116,13 @@ class BulkRenewInfo extends React.Component {
       requestCounts,
       errorMessages,
       onCancel,
+      user,
     } = this.props;
 
     const {
       overridableLoans,
       bulkOverrideDialogOpen,
+      showDueDatePicker,
     } = this.state;
 
     return (
@@ -163,13 +187,16 @@ class BulkRenewInfo extends React.Component {
         </div>
         {
           !isEmpty(overridableLoans) &&
-          <this.connectedBulkOverrideDialog
+          <BulkOverrideDialog
+            user={user}
             stripes={stripes}
+            showDueDatePicker={showDueDatePicker}
             failedRenewals={overridableLoans}
             loanPolicies={loanPolicies}
             errorMessages={errorMessages}
             requestCounts={requestCounts}
             open={bulkOverrideDialogOpen}
+            onCloseRenewModal={onCancel}
             onClose={this.closeBulkOverrideDialog}
           />
         }
